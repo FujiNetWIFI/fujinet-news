@@ -4,10 +4,12 @@ CC      = wcc -q
 CFLAGS  = -0 -bt=dos -ms -I../fujicom -osh $(CPPFLAGS)
 LD	= wlink OPTION quiet
 LDFLAGS = SYSTEM dos OPTION MAP
+DIST_DIR = dist
+TARGET = $(DIST_DIR)/news.exe
 
-all: news.exe
+all: $(TARGET) $(DIST_DIR)
 
-news.exe: news.obj screen.obj globals.obj topics.obj select.obj articles.obj article.obj fetch.obj
+$(TARGET): news.obj screen.obj globals.obj topics.obj select.obj articles.obj article.obj fetch.obj
 
 .obj.exe:
 	$(LD) $(LDFLAGS) NAME $@ file {$<} LIBRARY {clibs.lib}
@@ -15,6 +17,11 @@ news.exe: news.obj screen.obj globals.obj topics.obj select.obj articles.obj art
 	$(CC) $(CFLAGS) -fo=$@ $<
 .asm.obj: .AUTODEPEND
 	$(AS) $(ASFLAGS) -fo=$@ $<
+
+disk: $(TARGET)
+
+$(DIST_DIR):
+	mkdir -p $@
 
 clean : .SYMBOLIC
 	rm -f $(TARGET) *.obj *.map *.err

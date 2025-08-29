@@ -1,6 +1,7 @@
 TARGET_EXEC ?= news.ddp
 
 BUILD_DIR ?= ./build
+DIST_DIR ?= ./dist
 SRC_DIRS ?= ./src
 
 CC=zcc
@@ -11,14 +12,14 @@ OBJS := $(SRCS:%=$(BUILD_DIR)/%.o)
 DEPS := $(OBJS:.o=.d)
 
 CFLAGS=+coleco -subtype=adam -DBUILD_ADAM 
-LDFLAGS=+coleco -subtype=adam -o$(TARGET_EXEC) -create-app -leos -lsmartkeys 
+LDFLAGS=+coleco -subtype=adam -create-app -leos -lsmartkeys 
 ASFLAGS=+coleco -subtype=adam
 
 INC_DIRS := $(shell find $(SRC_DIRS) -type d)
 INC_FLAGS := $(addprefix -I,$(INC_DIRS))
 
-$(BUILD_DIR)/$(TARGET_EXEC): $(OBJS)
-	$(CC) $(LDFLAGS) $(OBJS)
+$(DIST_DIR)/$(TARGET_EXEC): $(OBJS) | $(DIST_DIR)
+	$(CC) -o$@ $(LDFLAGS) $(OBJS)
 
 # c source
 $(BUILD_DIR)/%.c.o: %.c
@@ -30,10 +31,15 @@ $(BUILD_DIR)/%.asm.o: %.asm
 	$(MKDIR_P) $(dir $@)
 	$(AS) $(ASFLAGS) -c $< -o $@
 
-.PHONY: clean
+.PHONY: clean disk
+
+disk: $(DIST_DIR)/$(TARGET_EXEC)
 
 clean:
-	$(RM) -r news* $(BUILD_DIR)
+	$(RM) -r news* $(BUILD_DIR) $(DIST_DIR)
+
+$(DIST_DIR):
+	$(MKDIR_P) $@
 
 -include $(DEPS)
 

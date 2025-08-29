@@ -1,0 +1,35 @@
+name: Compile (Reusable)
+
+on:
+  workflow_call:
+    inputs:
+      platform:
+        description: "Optional single platform to build"
+        required: false
+        type: string
+
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # If 'platform' input is empty, build all of these
+        platform: ${{ inputs.platform != '' && fromJSON(inputs.platform) ||
+                     fromJSON('["adam","apple2","atari","c16","c64","coco","msdos","vic20"]') }}
+
+    container:
+      image: fozztexx/defoogi:1.4.0
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        run: make -C clients/${{ matrix.platform }}
+
+      - name: Upload artifact for ${{ matrix.platform }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}
+          path: clients/${{ matrix.platform }}/dist/**
