@@ -6,6 +6,11 @@
 
 #define WIDTH_CANCEL 99
 
+#define BLACK_ON_GREEN_NORMAL   ((byte)0)
+#define BLACK_ON_GREEN_INVERTED ((byte)1)
+#define WHITE_ON_GREEN_NORMAL   ((byte)2)
+#define WHITE_ON_GREEN_INVERTED ((byte)3)
+
 #define gotox(x) moveCursor(x, getCursorRow())
 
 byte text_width_menu(void);

@@ -99,8 +99,9 @@ ArticlesState articles_fetch(void)
     topic = category_num_to_name(selectedTopic);
 
     show_fetching_msg(true, true);
-    
+
     articles_buffer = fetch_data(true);
+    articles_on_this_page = parse_articles_response(articles_buffer, _articles, MAX_ARTICLES_PER_PAGE);
 
     return ARTICLES_DISPLAY;
 }
@@ -244,12 +245,11 @@ int parse_articles_response(char *input, struct Article *articles, int capacity)
 ArticlesState articles_display(void)
 {
     int i=0;
-    int w1, w2; 
+    int w1, w2;
     byte y;
 
+    clear_screen(textMode == 32 ? 2 : 1);
     gotoxy(0,0);
-
-    articles_on_this_page = parse_articles_response(articles_buffer, _articles, MAX_ARTICLES_PER_PAGE);
 
     if (articles_on_this_page > 0)
     {
@@ -404,7 +404,7 @@ ArticlesState articles_menu(void)
     case 'C':
     case 'c':
         switch_colorset();
-        return ARTICLES_MENU;
+        return ARTICLES_DISPLAY;
     case 'G':
     case 'g':
         return ARTICLES_GOTO_PAGE;

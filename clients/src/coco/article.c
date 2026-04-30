@@ -199,7 +199,7 @@ ArticleState article_menu(void)
     case 'C':
     case 'c':
         switch_colorset();
-        return ARTICLE_MENU;
+        return ARTICLE_DISPLAY;
     case 'I':
     case 'i':
         return ARTICLE_INFO;

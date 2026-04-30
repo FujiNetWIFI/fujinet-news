@@ -54,20 +54,16 @@ void hirestxt_close(void)
     }
 }
 
+// Cycles colorset through 0..3. Bit 1 selects the screen color set
+// (passed to screen()); bit 0 selects inverted video (setScreenInverted()).
 void switch_colorset(void)
 {
     if (hirestxt_mode)
     {
-        if (colorset == 0)
-        {
-            colorset = 1;
-        }
-        else
-        {
-            colorset = 0;
-        }
+        colorset = (colorset + 1) & 3;
 
-        screen(1, colorset);
+        screen(1, (colorset >> 1) & 1);
+        setScreenInverted(colorset & 1);
     }
 }
 

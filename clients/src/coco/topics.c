@@ -145,7 +145,8 @@ TopicState topics_menu()
         case 'C':
         case 'c':
             switch_colorset();
-        return topicState;
+            topicChanged = 1;
+            return TOPICS_DISPLAY;
         case 'W':
         case 'w':
             select_screen_width();

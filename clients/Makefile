@@ -5,7 +5,9 @@ PLATFORMS += atari-pas
 PLATFORMS += c16
 PLATFORMS += c64
 PLATFORMS += coco
-PLATFORMS += msdos
+# msdos must be built with the make-exp script (FujiNet-RS232 / fujinet-lib-experimental):
+#   ./make-exp msdos
+#PLATFORMS += msdos
 PLATFORMS += vic20
 
 # You can run 'make <platform>' to build for a specific platform,
@@ -25,11 +27,20 @@ SRC_DIRS = src src/%PLATFORM%
 # - a URL to a git repo
 # - empty which will use whatever is the latest
 # - undefined, no fujinet-lib will be used
-FUJINET_LIB = https://github.com/FozzTexx/fujinet-lib-experimental.git\#msdos-fep-004
+FUJINET_LIB = 4.10.0
 
 # Some platforms don’t use FUJINET_LIB; set this to allow builds to continue
 # even if the library isn’t present.
 FUJINET_LIB_OPTIONAL = 1
+
+# HIRESTXT_LIB can be
+# - a version number such as 0.5.0.3
+# - a directory which contains the built library
+# - a URL to a git repo
+# - empty which will use whatever is the latest
+# - undefined, no hirestxt-mod will be used
+# Only used for coco/dragon builds.
+HIRESTXT_LIB = 0.5.0.3
 
 # Define extra dirs ("combos") that expand with a platform.
 # Format: platform+=combo1,combo2
@@ -53,6 +64,11 @@ CFLAGS_EXTRA_Z88DK = -Os
 # VIC-20 customization
 
 LDFLAGS_EXTRA_VIC20 = -C src/vic20/cart.cfg
+
+########################################
+# CoCo customization
+
+LDFLAGS_EXTRA_COCO = --org=2200 --limit=7E00
 
 ########################################
 # C16 customization
