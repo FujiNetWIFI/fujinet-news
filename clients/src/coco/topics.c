@@ -12,6 +12,8 @@
 #include "topics.h"
 #include "bar.h"
 #include "cocotext.h"
+#include "colorpicker.h"
+#include "appkey.h"
 
 #define MENU_Y_16 3
 #define MENU_Y_24 8
@@ -34,7 +36,7 @@ enum _selected_topic
 int topicChanged = 0; // flag for updating selection bar
 
 /**
- * @brief Reset topics menu 
+ * @brief Reset topics menu
  */
 TopicState topics_reset(void)
 {
@@ -45,7 +47,7 @@ TopicState topics_reset(void)
 
 TopicState topics_display(void)
 {
-    if (textMode==32)
+    if (textMode == 32)
     {
         clear_screen(3);
         gotoxy(0, 0);
@@ -76,28 +78,21 @@ TopicState topics_display(void)
     else
     {
         clear_screen(1);
+
         gotoxy(0, 0);
-        switch (textMode)
+        printf("%*s%s%*s", (int)((textMode - 20) >> 1), "", "FUJINET  NEWS TOPICS", (int)((textMode - 20) >> 1), "");
+        bar(0);
+
+        for (byte i = 0; i < 9; i++)
         {
-        case 40:
-        case 42:
-            hd_bar(0, "          FUJINET  NEWS TOPICS", true);
-            break;
-        case 80:
-            hd_bar(0, "                              FUJINET  NEWS TOPICS", true);
-            break;
+            gotoxy(0, i + MENU_Y_24);
+            printf("%-*s", (int)(textMode - 1), topicStrings[i]);
         }
 
-        gotoxy(0, MENU_Y_24 - 1);
+        print_reverse(0, 22, "c COLORS   w TO CHANGE SCREEN WIDTH", true);
 
-        for (byte i =0; i < 9; i++)
-        { 
-            hd_bar(i + MENU_Y_24, (char *)topicStrings[i], false);
-        }
-
-        print_reverse(0, 22, "w TO CHANGE SCREEN WIDTH", true);
-
-        hd_bar(23, "SELECT WITH ARROWS, THEN ENTER.", false);
+        gotoxy(0, 23);
+        printf("%-*s", (int)(textMode - 1), "SELECT WITH ARROWS, THEN ENTER.");
     }
 
     return TOPICS_MENU;
@@ -118,16 +113,8 @@ TopicState topics_menu()
     if (topicChanged)
     {
         topicChanged = 0;
-        if (textMode == 32)
-        {
-            bar(selectedTopic + MENU_Y_16);
-            gotoxy(15, textMode-1);
-        }
-        else
-        {
-            hd_bar((byte) selectedTopic + MENU_Y_24, topicStrings[selectedTopic], true);
-            gotoxy(23, textMode-1);
-        }
+        bar((byte)selectedTopic + (textMode == 32 ? MENU_Y_16 : MENU_Y_24));
+        gotoxy(textMode == 32 ? 31 : textMode - 1, textMode == 32 ? 15 : 23);
     }
 
     while (true)
@@ -144,12 +131,14 @@ TopicState topics_menu()
             return TOPICS_EXIT;
         case 'C':
         case 'c':
-            switch_colorset();
+            cycle_color_scheme();
+            settings_save();
             topicChanged = 1;
             return TOPICS_DISPLAY;
         case 'W':
         case 'w':
             select_screen_width();
+            settings_save();
             return TOPICS_RESET;
         }
     }
@@ -159,17 +148,8 @@ TopicState topics_up()
 {
     if (selectedTopic > TOP_STORIES)
     {
-        if (textMode == 32)
-        {
-            bar(selectedTopic + MENU_Y_16);
-            gotoxy(15, textMode-1);
-        }
-        else
-        {
-            hd_bar((byte) selectedTopic + MENU_Y_24, topicStrings[selectedTopic], false);
-            gotoxy(23, textMode-1);
-        }
-
+        bar((byte)selectedTopic + (textMode == 32 ? MENU_Y_16 : MENU_Y_24));
+        gotoxy(textMode == 32 ? 31 : textMode - 1, textMode == 32 ? 15 : 23);
         selectedTopic--;
         topicChanged = 1;
     }
@@ -181,19 +161,10 @@ TopicState topics_down()
 {
     if (selectedTopic < SPORTS)
     {
-        if (textMode == 32)
-        {
-            bar(selectedTopic + MENU_Y_16);
-            gotoxy(15, textMode-1);
-        }
-        else
-        {
-            hd_bar((byte) selectedTopic + MENU_Y_24, topicStrings[selectedTopic], false);
-            gotoxy(23, textMode-1);
-        }
-
+        bar((byte)selectedTopic + (textMode == 32 ? MENU_Y_16 : MENU_Y_24));
+        gotoxy(textMode == 32 ? 31 : textMode - 1, textMode == 32 ? 15 : 23);
         selectedTopic++;
-        topicChanged=1;
+        topicChanged = 1;
     }
 
     return TOPICS_MENU;
@@ -202,13 +173,13 @@ TopicState topics_down()
 State topics(void)
 {
     topicState=TOPICS_RESET;
-    
+
     while (state == TOPICS)
     {
         switch(topicState)
         {
         case TOPICS_RESET:
-            topicState = topics_reset(); 
+            topicState = topics_reset();
             break;
         case TOPICS_DISPLAY:
             topicState = topics_display();

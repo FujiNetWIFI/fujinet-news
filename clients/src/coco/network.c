@@ -5,23 +5,24 @@
 #include "globals.h"
 #include "cocotext.h"
 
-char url[256];
+char url[128];
 /**
  * @brief Http response buffer
  */
 static char response_buffer[2048];
 
-static const char *urlBase = "N:HTTPS://FUJINET.ONLINE/8bitnews/news.php";
-static const char *articles_printf_spec = "%s?t=lf&ps=%dx%d&l=%u&p=%u&c=%s";
-static const char *article_printf_spec = "%s?t=lf&ps=%dx%d&p=%u&a=%lu";
+#define URL_BASE "N:HTTPS://FUJINET.ONLINE/8bitnews/news.php"
+
+#define ARTICLES_URL_SPEC "%s?t=lf&ps=%dx%d&l=%u&p=%u&c=%s"
+#define ARTICLE_URL_SPEC  "%s?t=lf&ps=%dx%d&p=%u&a=%lu"
 
 void setup_url(bool articles)
 {
     if (articles)
     {   
         // The url for fetching the list of articles
-         sprintf(url,articles_printf_spec,
-            urlBase,
+         sprintf(url, ARTICLES_URL_SPEC,
+            URL_BASE,
             textMode,
             rows,
             articles_per_page,
@@ -31,8 +32,8 @@ void setup_url(bool articles)
     else
     {
         // The url for fetching a specific article
-        sprintf(url, article_printf_spec,
-            urlBase,
+        sprintf(url, ARTICLE_URL_SPEC,
+            URL_BASE,
             textMode - 1,
             rows,
             article_page,
@@ -55,7 +56,12 @@ char *fetch_data(bool articles)
     network_status(url, &bytesWaiting, (uint8_t *) &connected, &error);
 
     while(error == 1 && bytesWaiting > 0)
-    {   
+    {
+        if (buf_offset + bytesWaiting > sizeof(response_buffer) - 1)
+            bytesWaiting = sizeof(response_buffer) - 1 - buf_offset;
+        if (bytesWaiting == 0)
+            break;
+
         network_read(url, (byte *)&response_buffer[0+buf_offset], bytesWaiting);
         buf_offset += bytesWaiting;
         network_status(url, &bytesWaiting, (uint8_t *) &connected, &error);

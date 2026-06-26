@@ -104,23 +104,18 @@ ArticleState article_display(void)
         bar(1);
         bar(2);
         shadow(3, 0xa0);
-        printf("%s", screen_upper(pageData));
+        printf("%s", strupr(pageData));
         shadow(14, 0xa0);
     }
     else
     {
         clear_screen(1);
 
-        switch (textMode)
         {
-        case 40:
-        case 42:
-
-            multiline_hd_bar(0, 3, articles_display_headline(title), true);
-            break;
-        case 80:
-            multiline_hd_bar(0, 2, articles_display_headline(title), true);
-            break;
+            byte nlines = (textMode == 80) ? 2 : 3;
+            gotoxy(0, 0);
+            printf("%-*s", (int)textMode * (int)nlines, articles_display_headline(title));
+            for (byte r = 0; r < nlines; r++) bar(r);
         }
 
         printf("\n\n");
@@ -181,7 +176,7 @@ ArticleState article_menu(void)
             print_reverse(0, menu_line, format_menu_line(page, "up/dn iNFO  break ARTICLES", textMode), true);
             break;
         case 80:
-            print_reverse(0, menu_line, format_menu_line(page, "up/down iNFO break ARTICLES", textMode), true);
+            print_reverse(0, menu_line, format_menu_line(page, "up/down iNFO  break ARTICLES", textMode), true);
             break;
         }
     }
@@ -196,10 +191,6 @@ ArticleState article_menu(void)
         return ARTICLE_PREV_PAGE;
     case ARROW_DOWN:
         return ARTICLE_NEXT_PAGE;
-    case 'C':
-    case 'c':
-        switch_colorset();
-        return ARTICLE_DISPLAY;
     case 'I':
     case 'i':
         return ARTICLE_INFO;
@@ -260,37 +251,20 @@ ArticleState article_info(void)
     {
         clear_screen(1);
 
-        switch (textMode)
         {
-        case 40:
-        case 42:
-
-            multiline_hd_bar(0, 3, articles_display_headline(title), true);
-            gotoxy(0, 5);
-            printf("%13s%s\n", "Date:", date);
-            printf("%13s%s", "Source:", source);
-            break;
-        case 80:
-            multiline_hd_bar(0, 2, articles_display_headline(title), true);
-            gotoxy(0, 4);
-            printf("%33s%s\n", "Date:", date);
-            printf("%33s%s", "Source:", source);
-            break;
+            byte nlines = (textMode == 80) ? 2 : 3;
+            byte info_y = (textMode == 80) ? 4 : 5;
+            int  lpad   = (textMode == 80) ? 33 : 13;
+            gotoxy(0, 0);
+            printf("%-*s", (int)textMode * (int)nlines, articles_display_headline(title));
+            for (byte r = 0; r < nlines; r++) bar(r);
+            gotoxy(0, info_y);
+            printf("%*s%s\n", lpad, "Date:", date);
+            printf("%*s%s", lpad, "Source:", source);
         }
 
-        gotoxy(0, menu_line);
-
-        switch (textMode)
-        {
-        case 40:
-        case 42:
-
-            printf("      <Press any key to continue>");
-            break;
-        case 80:
-            printf("                            <Press any key to continue>");
-            break;
-        }
+        gotoxy((textMode - 27) >> 1, menu_line);
+        printf("<Press any key to continue>");
     }
 
 

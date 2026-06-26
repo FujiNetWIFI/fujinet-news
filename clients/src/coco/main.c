@@ -13,16 +13,15 @@
 #include "articles.h"
 #include "article.h"
 #include "cocotext.h"
+#include "colorpicker.h"
+#include "appkey.h"
 
 void init(void)
 {
     initCoCoSupport();
+    init_color_palette();
     textMode = getTextMode();
-    if (textMode == 32)
-    {
-        // Use hires text mode by default 
-        set_text_width(42);
-    }
+    settings_load();
 }
 
 int main(void)
@@ -51,8 +50,7 @@ int main(void)
             break;
     }
 
-    hirestxt_close();
-    clear_screen(1);
     coldStart();
+
     return 0;
 }

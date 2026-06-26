@@ -16,7 +16,6 @@
 byte text_width_menu(void);
 void hirestxt_init(void);
 void hirestxt_close(void);
-void switch_colorset(void);
 void gotoxy(byte x, byte y);
 void cursor(unsigned char onoff);
 void clear_screen(byte color);
@@ -31,5 +30,6 @@ void get_line(char *buf, uint8_t max_len);
 
 
 extern bool hirestxt_mode;
+extern byte colorset;
 
 #endif // COCOTEXT_H

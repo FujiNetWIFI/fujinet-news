@@ -35,10 +35,12 @@ extern long article_id;
 struct Article {
     long id;             // use long for article ID (at least 32 bits)
     char timestamp[20];  // "YYYY-MM-DD HH:MM:SS"
-    char headline[256];   // fixed size headline buffer
+    char headline[160];   // max headline_length in any mode
 };
 
 struct Article _articles[MAX_ARTICLES_PER_PAGE];
+
+static int parse_articles_response(char *input, struct Article *articles, int capacity);
 
 const char *category_num_to_name(int c)
 {
@@ -163,7 +165,7 @@ char *format_topic_line(const char *page, const char *title, int width) {
  * @param capacity max number of articles that fit in the buffer
  * @return Number of artticles on the page if success, -1 on error
  */
-int parse_articles_response(char *input, struct Article *articles, int capacity)
+static int parse_articles_response(char *input, struct Article *articles, int capacity)
 {
     char *line;
     int article_count;
@@ -296,20 +298,16 @@ ArticlesState articles_display(void)
         }
         else
         {
-            hd_bar(menu_line - 1, format_topic_line(page, topicStrings[selectedTopic], textMode), true);
+            gotoxy(0, menu_line - 1);
+            printf("%-*s", (int)(textMode - 1), format_topic_line(page, topicStrings[selectedTopic], textMode));
+            bar(menu_line - 1);
 
-            switch (textMode)
-            {
-            case 40:
-            case 42:
-                multiline_hd_bar(headline_locations_40_42[article_cursor_pos], 3,
-                                 _articles[article_cursor_pos].headline, true);
-                break;
-            case 80:
-                multiline_hd_bar(headline_locations_80[article_cursor_pos], 2,
-                                 _articles[article_cursor_pos].headline, true);
-                break;
-            }
+            byte base = (textMode == 80) ?
+                headline_locations_80[article_cursor_pos] :
+                headline_locations_40_42[article_cursor_pos];
+            byte nlines = (textMode == 80) ? 2 : 3;
+            for (byte r = 0; r < nlines; r++)
+                bar(base + r);
         }
     }
 
@@ -334,24 +332,18 @@ void articles_bar(void)
         }
         else
         {
-            switch (textMode)
-            {
-            case 40:
-            case 42:
-                multiline_hd_bar(headline_locations_40_42[article_cursor_pos_prev], 3,
-                                 _articles[article_cursor_pos_prev].headline, false);
-                multiline_hd_bar(headline_locations_40_42[article_cursor_pos], 3,
-                                 _articles[article_cursor_pos].headline, true);
-                break;
-            case 80:
-
-                multiline_hd_bar(headline_locations_80[article_cursor_pos_prev], 2,
-                                 _articles[article_cursor_pos_prev].headline, false);
-                multiline_hd_bar(headline_locations_80[article_cursor_pos], 2,
-                                 _articles[article_cursor_pos].headline, true);
-                break;
+            byte base_prev = (textMode == 80) ?
+                headline_locations_80[article_cursor_pos_prev] :
+                headline_locations_40_42[article_cursor_pos_prev];
+            byte base_cur = (textMode == 80) ?
+                headline_locations_80[article_cursor_pos] :
+                headline_locations_40_42[article_cursor_pos];
+            byte nlines = (textMode == 80) ? 2 : 3;
+            for (byte r = 0; r < nlines; r++) {
+                bar(base_prev + r);
+                bar(base_cur  + r);
             }
-        }   
+        }
         article_cursor_pos_prev = article_cursor_pos;
     }
 }
@@ -372,15 +364,21 @@ ArticlesState articles_menu(void)
         break;
     case 40:
     case 42:
-
-        print_reverse(0, menu_line, "  up/dn  CHOOSE   break  TOPICS", true);
-        print_reverse(0, menu_line + 1, "  lf/rt  PAGE  enter  VIEW  gO TO PAGE", true);
+    {
+        const char *l1 = "up/dn  CHOOSE  break  TOPICS";
+        const char *l2 = "lf/rt  PAGE  enter  VIEW  gO TO PAGE";
+        print_reverse((byte)((textMode - strlen(l1)) >> 1), menu_line, l1, true);
+        print_reverse((byte)((textMode - strlen(l2)) >> 1), menu_line + 1, l2, true);
         break;
+    }
     case 80:
-        // Centered on 80 character screen
-        print_reverse(0, menu_line, "                         up/down  CHOOSE   break  TOPICS\n", true);
-        print_reverse(0, menu_line + 1, "                      left/right  PAGE     enter  VIEW  gO TO PAGE", true);
+    {
+        const char *l1 = "up/down  CHOOSE  break  TOPICS";
+        const char *l2 = "left/right  PAGE     enter  VIEW  gO TO PAGE";
+        print_reverse((byte)((textMode - strlen(l1)) >> 1), menu_line, l1, true);
+        print_reverse((byte)((textMode - strlen(l2)) >> 1), menu_line + 1, l2, true);
         break;
+    }
     }
 
     articles_bar();
@@ -401,10 +399,6 @@ ArticlesState articles_menu(void)
         return ARTICLES_PREV_PAGE;
     case ARROW_RIGHT:
         return ARTICLES_NEXT_PAGE;
-    case 'C':
-    case 'c':
-        switch_colorset();
-        return ARTICLES_DISPLAY;
     case 'G':
     case 'g':
         return ARTICLES_GOTO_PAGE;
@@ -483,14 +477,14 @@ ArticlesState articles_next_page(void)
  */
 ArticlesState articles_goto_page(void)
 {
-    char maxbuf[32];
-    char *p;
+    char inbuf[12];
+    char *slash;
     int num = 0;
     int maxpage = 1;
 
-    p = strchr(page, '/') + 1;
-    strcpy(maxbuf, p);
-    maxpage = atoi(maxbuf);
+    slash = strchr(page, '/');
+    if (slash)
+        maxpage = atoi(slash + 1);
 
     while (num < 1 || num > maxpage)
     {
@@ -508,22 +502,22 @@ ArticlesState articles_goto_page(void)
             gotoxy(33, 0);
         }
 
-        get_line(p, 32);
+        get_line(inbuf, sizeof(inbuf));
 
-        if (p[strlen(p) - 1] == '\n')
+        if (inbuf[0] && inbuf[strlen(inbuf) - 1] == '\n')
         {
-            p[strlen(p) - 1] = '\0';
+            inbuf[strlen(inbuf) - 1] = '\0';
         }
 
-        if (!strcmp(p, "-1"))
+        if (!strcmp(inbuf, "-1"))
         {
             num = -1;
             break;
 
         }
-        else if (is_numeric(p) == TRUE)
+        else if (is_numeric(inbuf) == TRUE)
         {
-            num = atoi(p);
+            num = atoi(inbuf);
         }
         else
         {

@@ -70,6 +70,17 @@ LDFLAGS_EXTRA_VIC20 = -C src/vic20/cart.cfg
 
 LDFLAGS_EXTRA_COCO = --org=2200 --limit=7E00
 
+NEWSLOAD_COCO = src/coco/newsload/newsload.c
+NEWSLOAD_BIN = r2r/coco/newsload.bin
+DISK_EXTRA_DEPS_COCO := src/coco/basic/autoexec.bas $(NEWSLOAD_BIN)
+
+$(NEWSLOAD_BIN):: $(NEWSLOAD_COCO) | $(R2R_PD)
+	cmoc -o $@ $<
+
+coco/disk-post::
+	decb copy -t -0 src/coco/basic/autoexec.bas "$(DISK),AUTOEXEC.BAS"
+	decb copy -b -2 $(NEWSLOAD_BIN) "$(DISK),NEWSLOAD.BIN"
+
 ########################################
 # C16 customization
 

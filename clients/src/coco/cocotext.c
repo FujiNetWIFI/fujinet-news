@@ -4,6 +4,7 @@
 #include "hirestxt.h"
 #include "globals.h"
 #include "bar.h"
+#include "colorpicker.h"
 #include "cocotext.h"
 
 //(byte *)*(byte *)0x00BC << 8 This is where BASIC puts it by default
@@ -12,7 +13,7 @@
 /**
  * @brief Temp space for strupr(s) output, so original strings doesn't get changed.
  */
-static char uppercase_tmp[321];
+static char uppercase_tmp[161];
 
 byte colorset = 0;
 bool hirestxt_mode = false;
@@ -37,8 +38,9 @@ void hirestxt_init(void)
     width(32);                               /* PMODE graphics will only appear from 32x16 (does nothing on CoCo 1&2) */
     pmode(4, (byte *)init.textScreenBuffer); /* hires text mode */
     pcls(255);
-    screen(1, colorset);
+    screen(1, (colorset >> 1) & 1);
     initHiResTextScreen(&init);
+    setScreenInverted(colorset & 1);
 }
 
 void hirestxt_close(void)
@@ -51,19 +53,6 @@ void hirestxt_close(void)
         pmode(0, 0);
         screen(0, 0);
         clear_screen(255);
-    }
-}
-
-// Cycles colorset through 0..3. Bit 1 selects the screen color set
-// (passed to screen()); bit 0 selects inverted video (setScreenInverted()).
-void switch_colorset(void)
-{
-    if (hirestxt_mode)
-    {
-        colorset = (colorset + 1) & 3;
-
-        screen(1, (colorset >> 1) & 1);
-        setScreenInverted(colorset & 1);
     }
 }
 
@@ -100,6 +89,12 @@ void clear_screen(byte color)
     else
     {
         cls(color);
+        if (textMode != 32)
+        {
+            set_screen_attrs((g_normal_fg << 3) | g_normal_bg);
+            set_border();
+            pen_normal();
+        }
     }
 }
 
@@ -111,16 +106,12 @@ void reverse(bool onoff)
         {
             setInverseVideoMode(onoff);
         }
-        else // CoCo3 40/80 mode (
+        else // CoCo3 40/80 mode
         {
             if (onoff)
-            {
-                attr(FG_WHITE, BG_BLUE, FALSE, FALSE);
-            }
+                attr(g_hilight_fg, g_hilight_bg, FALSE, FALSE);
             else
-            {
-                attr(FG_BLACK, BG_GREEN, FALSE, FALSE);
-            }
+                pen_normal();
         }
     }
 }
@@ -182,8 +173,8 @@ void print_reverse(byte x, byte y, const char *text, bool lowercase_only)
  */
 char *screen_upper(const char *s)
 {
-    memset(uppercase_tmp, 0, sizeof(uppercase_tmp));
-    strcpy(uppercase_tmp, s);
+    strncpy(uppercase_tmp, s, sizeof(uppercase_tmp) - 1);
+    uppercase_tmp[sizeof(uppercase_tmp) - 1] = '\0';
 
     return strupr(uppercase_tmp);
 }
@@ -193,8 +184,8 @@ char *screen_upper(const char *s)
  */
 char *screen_lower(const char *s)
 {
-    memset(uppercase_tmp, 0, sizeof(uppercase_tmp));
-    strcpy(uppercase_tmp, s);
+    strncpy(uppercase_tmp, s, sizeof(uppercase_tmp) - 1);
+    uppercase_tmp[sizeof(uppercase_tmp) - 1] = '\0';
 
     return strlwr(uppercase_tmp);
 }
@@ -237,7 +228,7 @@ void width_highlight(int i, byte y, byte width, bool highlight)
     else
     {
         gotoxy((byte)i * 3, y);
-        printf(buf);
+        printf("%s", buf);
     }
 }
 
@@ -264,6 +255,8 @@ byte text_width_menu(void)
 
     menu_line = (textMode == 32) ? 15 : 23;
 
+    gotoxy(0, menu_line - 1);
+    printf("%-*s", (int)(textMode - 1), "");
     print_reverse(0, menu_line -1, "l/r TO SELECT, break TO CANCEL", true);
     gotoxy(0, menu_line);
     printf("                               ");
@@ -339,7 +332,8 @@ void show_fetching_msg(bool clear, bool articles)
         {
             clear_screen(1);
         }
-        hd_bar(0, fetching_buf, false);
+        gotoxy(0, 0);
+        printf("%-*s", (int)(textMode - 1), fetching_buf);
     }
 }
 
@@ -407,6 +401,7 @@ void get_line(char *buf, uint8_t max_len)
     }
     else
     {
-        strcpy(buf, readline());
+        strncpy(buf, readline(), max_len - 1);
+        buf[max_len - 1] = '\0';
     }
 }

@@ -13,5 +13,13 @@
 *~
 clients/_libs
 clients/_libs/**
+clients/_cache
+clients/_cache/**
+clients/build
+clients/build/**
+clients/r2r
+clients/r2r/**
+__pycache__/
+*.pyc
 .gitignore
 clients/coco/.vscode/c_cpp_properties.json

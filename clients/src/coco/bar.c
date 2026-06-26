@@ -1,49 +1,102 @@
-/**
- * @brief   News Reader
- * @author  Thomas Cherryhomes
- * @email   thom dot cherryhomes at gmail dot com
- * @license gpl v. 3, see LICENSE for details.
- * @verbose Bar routines
- */
-
 #include <cmoc.h>
 #include <coco.h>
 #include "globals.h"
 #include "cocotext.h"
+#include "hirestxt.h"
 #include "bar.h"
+#include "colorpicker.h"
 
+static unsigned char bar_saved_ffa6;
+static unsigned int  bar_addr;
+static unsigned char bar_len;
+static unsigned char bar_fill_val;
+static unsigned int  bar_attr_cnt;
 
-/**
- * @brief toggle bar for Y position (0-15) 
- * @param y vertical position (0-15) 
- */
-void bar(int y)
+void bar(byte y)
 {
     byte *sp;
-    int o = 0;
 
     if (textMode == 32)
     {
-        sp = (byte *)SCREEN_RAM_TOP_32;
-        o = y << 5; // Multiply by 32
-        sp += o;
-        // In 32 column mode, the bar is a full line of inverse text
-        for (int i=0;i<32;i++)
+        sp = (byte *)SCREEN_RAM_TOP_32 + ((int)y << 5);
+        for (int i = 0; i < 32; i++)
         {
-            // Only change non-semigraphics characters
             if (*sp < 0x80)
                 *sp ^= 0x40;
             sp++;
         }
     }
+    else if (hirestxt_mode)
+    {
+        for (byte c = 0; c < textMode; c++)
+            writeCharAt_42cols(c, y, 0);
+    }
+    else
+    {
+        bar_addr = 0xC000 + (unsigned int)y * (unsigned int)textMode * 2 + 1;
+        bar_len  = textMode;
+        asm
+        {
+            orcc    #$50
+            lda     $FFA6
+            sta     _bar_saved_ffa6
+            lda     #$36
+            sta     $FFA6
+
+            ldx     _bar_addr
+            ldb     _bar_len
+@bar_loop
+            lda     ,x
+            eora    _g_attr_xor
+            sta     ,x
+            leax    2,x
+            decb
+            bne     @bar_loop
+
+            lda     _bar_saved_ffa6
+            sta     $FFA6
+            andcc   #$AF
+        }
+    }
 }
 
+/* Fill a run of attribute bytes on the 40/80-col text screen.
+ * addr points at the first attribute byte (char byte + 1); cnt is the
+ * number of cells; every other byte (the attribute) is set to val. */
+void fill_attr(unsigned int addr, unsigned int cnt, byte val)
+{
+    bar_addr     = addr;
+    bar_attr_cnt = cnt;
+    bar_fill_val = val;
+    asm
+    {
+        orcc    #$50
+        lda     $FFA6
+        sta     _bar_saved_ffa6
+        lda     #$36
+        sta     $FFA6
 
-/**
- * @brief draw shadow for color c at vert pos y
- * @param y Vertical position (0-15)
- * @param c bkg color (0-7) 
- */
+        ldx     _bar_addr
+        ldy     _bar_attr_cnt
+        lda     _bar_fill_val
+@fill_loop
+        sta     ,x
+        leax    2,x
+        leay    -1,y
+        bne     @fill_loop
+
+        lda     _bar_saved_ffa6
+        sta     $FFA6
+        andcc   #$AF
+    }
+}
+
+/* Fill all attribute bytes on the 40/80-col text screen with val. */
+void set_screen_attrs(byte val)
+{
+    fill_attr(0xC001, (unsigned int)textMode * 24, val);
+}
+
 void shadow(int y, int c)
 {
     byte *sp = (byte *)SCREEN_RAM_TOP_32;
@@ -52,40 +105,5 @@ void shadow(int y, int c)
     sp += o;
 
     *sp = (byte)c | 0x0b;
-    memset(sp+1,c | 0x03, 31);
+    memset(sp + 1, c | 0x03, 31);
 }
-
-void hd_bar(byte y, const char *text, bool rev)
-{
-    gotoxy(0, y);
-    int width;
-
-    if (hirestxt_mode)
-    {
-        width = textMode;
-    }
-    else
-    {
-        width = textMode - 1;
-    }
-
-    reverse(rev);
-
-    printf("%-*s", width, text);
-
-    reverse(false);
-}
-
-void multiline_hd_bar(byte y, int lines, const char *text, bool rev)
-{
-    gotoxy(0, y);
-
-    reverse(rev);
-
-    printf("%-*s", (textMode * lines), text);
-
-    reverse(false);
-}
-
-
-
