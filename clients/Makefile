@@ -90,3 +90,11 @@ LDFLAGS_EXTRA_C16 = -C src/c16/c16.cfg
 # C64 customization
 
 LDFLAGS_EXTRA_C16 = -C src/c64/c64.cfg
+
+########################################
+# atari customization
+
+ATARI_HTTP_CLIENT = src/atari/http_client.xex
+EXECUTABLE_EXTRA_DEPS_ATARI-PAS = $(ATARI_HTTP_CLIENT)
+$(ATARI_HTTP_CLIENT): src/atari/http_client/http_client.asm
+	mads $^ -o:$@
