@@ -11,6 +11,10 @@
     CONST CS_GREEN      = 5
     CONST CS_YELLOW     = 6
     CONST CS_WHITE      = 7
+    ' Pastel 15 ("purple", renders as dark magenta). Stack/band color ONLY:
+    ' the card foreground field is 3 bits, so this is not valid as a
+    ' s_col_color / PRINT COLOR value -- MODE arguments only.
+    CONST CS_MAGENTA    = 15
 
     CONST SCREEN_COLS = 20
     DEF FN screenpos(aColumn, aRow) = (((aRow)*SCREEN_COLS)+(aColumn))

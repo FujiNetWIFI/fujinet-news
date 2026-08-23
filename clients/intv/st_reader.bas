@@ -1,10 +1,11 @@
 ' st_reader.bas -- article reader screen.
 '
-' Tan "paper" background with a blue title band (MODE 0,3,1,3,1 -- the
-' band is the highlight color, opened at card 0 and closed at card 40, so
-' it covers rows 0-1). Body text is drawn black-on-tan exactly as the
-' server wrapped it (ps=20x8 = the 8 body rows). Menu row: page indicator
-' in blue, key tokens in red, command words in black.
+' Tan "paper" background with blue chrome (MODE 0,3,1,3,1): the title
+' band opens at card 0 and closes at card 40 (rows 0-1), and one more
+' fixed advance at card 220 puts the menu row on a matching blue band.
+' Body text is drawn black-on-tan exactly as the server wrapped it
+' (ps=20x8 = the 8 body rows). Menu row: page indicator and command words
+' in white, key tokens in yellow.
 '
 ' Layout (rows):
 '   0-1    title, word-wrapped client-side to 2 rows, white on blue
@@ -26,6 +27,7 @@ reader_enter:
 
 reader_show:
     MODE 0,CS_TAN,CS_BLUE,CS_TAN,CS_BLUE
+    BORDER CS_BLUE
     WAIT
     CLS
     GOSUB reader_draw
@@ -161,10 +163,12 @@ reader_draw: PROCEDURE
         END IF
     NEXT rd_i
     GOSUB reader_menu
-    ' Title band advance bits LAST (everything above writes whole words).
+    ' Title band + menu band advance bits LAST (everything above writes
+    ' whole words).
     #hl_a = 0
     #hl_b = 40
     GOSUB hl_set
+    #BACKTAB(220) = #BACKTAB(220) OR $2000
 END
 
 reader_menu: PROCEDURE
@@ -176,11 +180,11 @@ reader_menu: PROCEDURE
     s_row = 11
     s_col = 0
     s_max = 7
-    s_col_color = CS_BLUE
+    s_col_color = CS_WHITE
     #s_src = SC_PAGE
     GOSUB scr_puts
-    PRINT AT screenpos(8,11) COLOR CS_RED,"^V"
-    PRINT COLOR CS_BLACK,":PG "
-    PRINT COLOR CS_RED,"0"
-    PRINT COLOR CS_BLACK,":INFO"
+    PRINT AT screenpos(8,11) COLOR CS_YELLOW,"^V"
+    PRINT COLOR CS_WHITE,":PG "
+    PRINT COLOR CS_YELLOW,"0"
+    PRINT COLOR CS_WHITE,":INFO"
 END

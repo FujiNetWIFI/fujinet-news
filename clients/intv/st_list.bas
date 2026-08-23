@@ -1,9 +1,13 @@
 ' st_list.bas -- article-list screen.
 '
-' Black background, blue selection bar (MODE 0,0,1,0,1). Three articles
-' per page (server l=3), each headline word-wrapped client-side across 3
-' rows of 20 (wrap.bas). Header row: category title left (yellow), page
-' indicator right (white). Rows 10-11: menus with yellow key tokens.
+' Black content on blue chrome: the header row 0 and menu rows 10-11 sit
+' on blue bands (advance bits at cards 20 and 200, see screen.bas), and
+' the selection bar is dark magenta -- this screen deviates from the
+' shared chrome-as-bar scheme and re-deals the stack colors per selection
+' (see list_bar_set). Three articles per page (server l=3), each headline
+' word-wrapped client-side across 3 rows of 20 (wrap.bas). Header row:
+' category title left (yellow), page indicator right (white). Menus:
+' yellow key tokens.
 '
 ' Goto-page: any keypad digit 1-9 starts numeric entry echoed on row 11;
 ' Enter (or an action button) jumps, Clear cancels.
@@ -13,8 +17,10 @@
 '   1-9    3 records x 3 wrapped headline rows
 '   10     ^V:PICK <>:PG #:GOTO
 '   11     ENT:READ  CLR:TOPICS
-' Bar: advance bits at cards (1+sel*3)*20 and (4+sel*3)*20. For sel=2 the
-' closing bit lands on row 10 column 0 -- still on-screen, by design.
+' Bar: pair at cards (1+sel*3)*20 and (4+sel*3)*20. sel=0's opening edge
+' coincides with the header boundary (card 20) and sel=2's closing edge
+' with the menu boundary (card 200) -- the shared card carries a single
+' advance bit and list_bar_set re-deals the stack colors to match.
 
     DIM arts_on_page, rec_ok, rc_n, p_r, ls_i, ls_j, goto_len
     DIM #list_pcur, #list_pmax, #goto_val, #rc_dst
@@ -28,7 +34,8 @@ list_enter:
     IF list_sel >= arts_on_page THEN list_sel = arts_on_page - 1
 
 list_show:
-    MODE 0,CS_BLACK,CS_BLUE,CS_BLACK,CS_BLUE
+    MODE 0,CS_BLUE,CS_BLACK,CS_BLUE,CS_BLACK
+    BORDER CS_BLUE
     WAIT
     CLS
     GOSUB list_draw
@@ -47,13 +54,13 @@ list_loop:
     GOTO list_loop
 
 list_up:
-    IF list_sel > 0 THEN GOSUB hl_clear : list_sel = list_sel - 1 : GOSUB list_bar_set : GOTO list_loop
+    IF list_sel > 0 THEN list_sel = list_sel - 1 : GOSUB list_bar_set : GOTO list_loop
     ' Up past the top: previous page, cursor at the bottom (coco behavior).
     IF #list_pcur > 1 THEN list_sel = 2 : #list_page = #list_pcur - 1 : GOTO list_enter
     GOTO list_loop
 
 list_down:
-    IF list_sel < (arts_on_page - 1) THEN GOSUB hl_clear : list_sel = list_sel + 1 : GOSUB list_bar_set : GOTO list_loop
+    IF list_sel < (arts_on_page - 1) THEN list_sel = list_sel + 1 : GOSUB list_bar_set : GOTO list_loop
     IF #list_pcur < #list_pmax THEN list_sel = 0 : #list_page = #list_pcur + 1 : GOTO list_enter
     GOTO list_loop
 
@@ -82,13 +89,13 @@ list_goto_loop:
     IF in_key <= 9 THEN GOSUB list_goto_digit
     IF in_key = KEYPAD_ENTER THEN GOTO list_goto_go
     IF in_btn = 1 THEN GOTO list_goto_go
-    IF in_key = KEYPAD_CLEAR THEN GOSUB list_menu : GOSUB hl_set : GOTO list_loop
+    IF in_key = KEYPAD_CLEAR THEN GOSUB list_menu : GOSUB list_bar_set : GOTO list_loop
     GOTO list_goto_loop
 
 list_goto_go:
     IF #goto_val < 1 THEN #goto_val = 1
     IF #goto_val > #list_pmax THEN #goto_val = #list_pmax
-    IF #goto_val = #list_pcur THEN GOSUB list_menu : GOSUB hl_set : GOTO list_loop
+    IF #goto_val = #list_pcur THEN GOSUB list_menu : GOSUB list_bar_set : GOTO list_loop
     #list_page = #goto_val
     GOTO list_enter
 
@@ -241,10 +248,29 @@ list_menu: PROCEDURE
     PRINT COLOR CS_WHITE,":TOPICS"
 END
 
+' The bar has its own color (magenta) instead of sharing chrome, so a bar
+' edge that lands on a fixed band boundary can't just collapse into the
+' neighboring band -- the advance COUNT between header and menu changes
+' with the selection, shifting which stack entry each band scans out on.
+' Re-deal the stack per selection to compensate (advance cards -> bands):
+'   sel=0: 20 80 200      header,BAR,bg,menu    -> blue,MAG,blk,blue
+'   sel=1: 20 80 140 200  header,bg,BAR,bg,menu -> blue,blk,MAG,blk (menu
+'          wraps back to entry 0)
+'   sel=2: 20 140 200     header,bg,BAR,menu    -> blue,blk,MAG,blue
+' Order matters: MODE lands at the WAIT's vblank, and the bits move right
+' after -- well before the beam reaches row 1 -- so no frame renders a
+' new bit pattern under the old colors (or vice versa).
 list_bar_set: PROCEDURE
+    IF list_sel = 0 THEN MODE 0,CS_BLUE,CS_MAGENTA,CS_BLACK,CS_BLUE
+    IF list_sel = 1 THEN MODE 0,CS_BLUE,CS_BLACK,CS_MAGENTA,CS_BLACK
+    IF list_sel = 2 THEN MODE 0,CS_BLUE,CS_BLACK,CS_MAGENTA,CS_BLUE
+    WAIT
+    GOSUB hl_clear
     #hl_a = (1 + list_sel * 3) * 20
     #hl_b = (4 + list_sel * 3) * 20
     GOSUB hl_set
+    #BACKTAB(20) = #BACKTAB(20) OR $2000
+    #BACKTAB(200) = #BACKTAB(200) OR $2000
 END
 
 list_fetch_fail:

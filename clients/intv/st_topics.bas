@@ -1,14 +1,20 @@
 ' st_topics.bas -- topic-selection screen.
 '
-' Blue background, dark-green selection bar (MODE 0,1,4,1,4). Nine
-' categories on rows 2-10, each direct-selectable with keypad 1-9 or via
-' disc + Enter/action button. Menu row: keypad-key tokens in yellow,
+' Blue content on dark-green chrome (MODE 0,4,1,4,1): the header row 0
+' and menu row 11 sit on dark-green bands (fixed advance bits at cards 20
+' and 220, see screen.bas), and the selection bar is the same dark green.
+' Nine categories on rows 2-10, each direct-selectable with keypad 1-9 or
+' via disc + Enter/action button. Menu row: keypad-key tokens in yellow,
 ' command words in white.
+'
+' sel=8's bar closes exactly at card 220, the menu boundary -- the bar
+' merges with the menu band and topics_bar_set suppresses the extra bit.
 
     DIM topic_sel, tp_i
 
 topics_enter:
-    MODE 0,CS_BLUE,CS_DARKGREEN,CS_BLUE,CS_DARKGREEN
+    MODE 0,CS_DARKGREEN,CS_BLUE,CS_DARKGREEN,CS_BLUE
+    BORDER CS_DARKGREEN
     WAIT
     CLS
     list_valid = 0
@@ -33,8 +39,8 @@ topics_enter:
     PRINT COLOR CS_YELLOW,"ENT"
     PRINT COLOR CS_WHITE,":READ"
 
-    ' Selection bar last -- PRINT/scr_puts write whole words and would
-    ' wipe the advance bits.
+    ' All advance bits last (bands + bar) -- PRINT/scr_puts write whole
+    ' words and would wipe them.
     GOSUB topics_bar_set
 
 topics_loop:
@@ -62,6 +68,14 @@ topics_select:
 
 topics_bar_set: PROCEDURE
     #hl_a = (2 + topic_sel) * 20
-    #hl_b = (3 + topic_sel) * 20
+    IF topic_sel = 8 THEN #hl_b = #hl_a ELSE #hl_b = (3 + topic_sel) * 20
     GOSUB hl_set
+    ' Fixed band boundaries: row 1 drops to content blue, row 11 returns
+    ' to menu green -- except when sel=8's bar already runs into the menu.
+    #BACKTAB(20) = #BACKTAB(20) OR $2000
+    IF topic_sel = 8 THEN
+        #BACKTAB(220) = #BACKTAB(220) AND $DFFF
+    ELSE
+        #BACKTAB(220) = #BACKTAB(220) OR $2000
+    END IF
 END

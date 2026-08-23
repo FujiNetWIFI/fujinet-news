@@ -53,18 +53,28 @@ scr_puts: PROCEDURE
 END
 
 ' ---------------------------------------------------------------------------
-' Row-highlight bar via the color-stack advance bit. The screens run
-' MODE 0,bg,bar,bg,bar: setting bit 13 ($2000) on the first card of a
-' region advances the stack to the bar color, and setting it on the first
-' card AFTER the region advances back to bg. #hl_a/#hl_b hold the two card
-' indices of the currently-set pair, so hl_clear can undo exactly what
-' hl_set did.
+' Color-stack bands. Every screen runs MODE 0,chrome,bg,chrome,bg: the
+' stack resets to entry 0 (chrome) at the top of each frame, and bit 13
+' ($2000) on a card steps it to the next entry, so the display scans out
+' chrome / bg / chrome / bg band by band. Row 0 (the header) therefore
+' starts on chrome for free; each screen then sets a fixed advance bit
+' where its content starts (down to bg) and where its menu starts (back
+' to chrome), and moves the #hl_a/#hl_b pair between them for the
+' selection bar or title band. In the topics and reader screens chrome
+' doubles as the bar/title color -- that is what lets a bar edge that
+' lands exactly on a fixed boundary collapse: two advances can't share a
+' card, so the screen suppresses the duplicate bit and the bar simply
+' merges with the adjacent band. The list screen instead gives its bar a
+' dedicated color (dark magenta), which kills the collapse trick -- the
+' advance count between header and menu varies with the selection, so
+' list_bar_set re-issues MODE with the stack entries dealt to match.
 '
 ' Two rules, both load-bearing:
 '   1. Apply bits LAST in every draw path -- scr_puts/scr_row_clear/PRINT
 '      write whole words and silently wipe them.
-'   2. Keep exactly one open/close pair live per screen, or the stack
-'      doesn't return to bg for the rest of the display.
+'   2. The *_bar_set procs own the complete bit pattern for their screen
+'      (fixed boundaries included) -- after any redraw, call the screen's
+'      bar_set, not bare hl_set, or the boundary bits stay lost.
 ' ---------------------------------------------------------------------------
 hl_set: PROCEDURE
     #BACKTAB(#hl_a) = #BACKTAB(#hl_a) OR $2000

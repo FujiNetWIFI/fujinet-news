@@ -4,14 +4,18 @@
 ' the FujiNet mailbox transport (fujinet.bas, the shared library from
 ' netcat/intv -- see its header for the $9C00 mailbox contract):
 '
-'   topics (st_topics.bas)  blue bg   pick a category, keypad 1-9 or disc
-'   list   (st_list.bas)    black bg  3 word-wrapped headlines per page
-'   reader (st_reader.bas)  tan bg    server-wrapped body, blue title band
+'   topics (st_topics.bas)  blue bg, dark-green chrome  keypad 1-9 or disc
+'   list   (st_list.bas)    black bg, blue chrome,      3 headlines per page
+'                           magenta selection bar
+'   reader (st_reader.bas)  tan bg, blue chrome         server-wrapped body
 '
 ' The server does the article-body word wrap (ps=20x8 in the URL) and the
 ' pagination; the client word-wraps only headlines and the title (wrap.bas).
-' Each screen sets its own background via MODE 0 and gets its selection
-' bar / title band from the color-stack advance bit (screen.bas).
+' Each screen runs a color stack of a content background plus a
+' contrasting "chrome" color for the header and menu bands, all cut from
+' advance bits (screen.bas) -- so the key legends and headers stand apart
+' from the content. The topics/reader bar and title band reuse chrome;
+' the list screen's bar gets its own color (see list_bar_set).
 '
 ' Scratch cart RAM map ($9000-$97FF convention from the other clients;
 ' $9100-$917F belongs to fujinet.bas):
@@ -67,6 +71,7 @@
 
 nw_start:
     MODE 0,CS_BLACK,CS_BLACK,CS_BLACK,CS_BLACK
+    BORDER CS_BLACK
     WAIT
     CLS
     PRINT AT screenpos(4,3) COLOR CS_YELLOW,"FUJINET NEWS"
@@ -252,7 +257,13 @@ END
 
 ' --- Shared UI --------------------------------------------------------------
 
+' Both transient screens reset the stack to plain black: after CLS the
+' whole display shows stack entry 0, which under the caller's MODE is its
+' chrome color. The next screen re-issues its own MODE on entry.
 draw_fetching: PROCEDURE
+    MODE 0,CS_BLACK,CS_BLACK,CS_BLACK,CS_BLACK
+    BORDER CS_BLACK
+    WAIT
     CLS
     PRINT AT screenpos(4,5) COLOR CS_WHITE,"FETCHING..."
 END
@@ -261,6 +272,9 @@ END
 ' one, else a generic message) and wait for any input. Caller decides
 ' which screen to fall back to.
 err_show: PROCEDURE
+    MODE 0,CS_BLACK,CS_BLACK,CS_BLACK,CS_BLACK
+    BORDER CS_BLACK
+    WAIT
     CLS
     IF fetch_err = 2 THEN
         s_row = 4
